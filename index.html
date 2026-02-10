@@ -426,16 +426,6 @@
 </head>
 <body>
     <h1>🤾 Punteggio Pallamano</h1>
-
-    <div style="background: white; border-radius: 10px; padding: 10px; margin-bottom: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
-    <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
-        <button onclick="saveToCloud()" style="background: #27ae60; font-size: 0.9em; padding: 8px 16px;">💾 Salva</button>
-        <button onclick="shareMatch()" style="background: #3498db; font-size: 0.9em; padding: 8px 16px;">🔗 Condividi</button>
-        <button onclick="showMatchList()" style="background: #9b59b6; font-size: 0.9em; padding: 8px 16px;">📋 Partite</button>
-    </div>
-    <span id="save-status" style="font-size: 0.85em; color: #27ae60; margin-top: 5px; display: block; text-align: center;"></span>
-</div>
-
     
     <div id="timer-section">
         <div class="period-selector">
@@ -495,19 +485,6 @@
     <button id="reset-btn" onclick="return resetAll()">Reset Totale</button>
 
     <!-- Modal Statistiche -->
-
-    <!-- Modal Lista Partite -->
-<div id="match-list-modal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2>📋 Partite Salvate</h2>
-            <button class="btn-close" onclick="document.getElementById('match-list-modal').classList.remove('active')">✕</button>
-        </div>
-        <div id="match-list"></div>
-    </div>
-</div>
-
-    
     <div id="stats-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -558,7 +535,6 @@
                 goalHistory.push(index); // Salva chi ha segnato
                 document.getElementById('team1-score').innerText = team1Score;
                 renderPlayers();
-                saveToCloud();
             }
         }
 
@@ -645,7 +621,6 @@
                 team2Score++;
                 document.getElementById('team2-score').innerText = team2Score;
             }
-            saveToCloud();
         }
 
         function decrementScore(team) {
@@ -660,7 +635,6 @@
                         players[lastPlayerIndex].goals--;
                         renderPlayers();
                     }
-                saveToCloud();    
                 }
             } else if (team === 'team2' && team2Score > 0) {
                 team2Score--;
@@ -814,163 +788,10 @@
         });
 
         // Inizializzazione
- window.onload = function() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const matchId = urlParams.get('match');
-    
-    if (matchId) {
-        localStorage.setItem('currentMatchId', matchId);
-        loadFromCloud(matchId);
-    } else {
-        renderPlayers();
-        updateTimerDisplay();
-    }
-};
-
+        window.onload = function() {
+            renderPlayers();
+            updateTimerDisplay();
         };
     </script>
-    <!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
-
-<script>
-// Configurazione Firebase
-const firebaseConfig = {
-  apiKey: "AIzaSyA9RNOwk99prui6AaNCJHqWH3mG1QuK_TY",
-  authDomain: "handball-score.firebaseapp.com",
-  databaseURL: "https://handball-score-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "handball-score",
-  storageBucket: "handball-score.firebasestorage.app",
-  messagingSenderId: "364734068811",
-  appId: "1:364734068811:web:2189b95bf2bb98309e35ce"
-};
-
-// Inizializza Firebase
-firebase.initializeApp(firebaseConfig);
-const database = firebase.database();
-
-// Salva su cloud
-function saveToCloud() {
-    const matchId = localStorage.getItem('currentMatchId') || generateMatchId();
-    localStorage.setItem('currentMatchId', matchId);
-    
-    const matchData = {
-        team1Score, team2Score, team1Name, team2Name,
-        currentPeriod, timeInSeconds, players, goalHistory,
-        lastUpdate: Date.now()
-    };
-    
-    database.ref('matches/' + matchId).set(matchData)
-        .then(() => {
-            console.log('✅ Salvato su cloud');
-            const status = document.getElementById('save-status');
-            if(status) {
-                status.innerText = '☁️ Salvato';
-                setTimeout(() => status.innerText = '', 2000);
-            }
-        })
-        .catch(error => console.error('Errore:', error));
-}
-
-// Carica da cloud
-function loadFromCloud(matchId) {
-    database.ref('matches/' + matchId).once('value')
-        .then(snapshot => {
-            const data = snapshot.val();
-            if (data) {
-                team1Score = data.team1Score || 0;
-                team2Score = data.team2Score || 0;
-                team1Name = data.team1Name || "Ferrarin";
-                team2Name = data.team2Name || "Leno";
-                currentPeriod = data.currentPeriod || 1;
-                timeInSeconds = data.timeInSeconds || (20 * 60);
-                players = data.players || players;
-                goalHistory = data.goalHistory || [];
-                
-                document.getElementById('team1-score').innerText = team1Score;
-                document.getElementById('team2-score').innerText = team2Score;
-                document.getElementById('team1-name').innerText = team1Name;
-                document.getElementById('team2-name').innerText = team2Name;
-                
-                document.querySelectorAll('.period-btn').forEach((btn, index) => {
-                    btn.classList.toggle('active', index + 1 === currentPeriod);
-                });
-                
-                renderPlayers();
-                updateTimerDisplay();
-                alert('✅ Partita caricata!');
-            } else {
-                alert('❌ Partita non trovata');
-            }
-        })
-        .catch(error => {
-            console.error('Errore:', error);
-            alert('❌ Errore caricamento');
-        });
-}
-
-// Genera ID univoco
-function generateMatchId() {
-    return 'match_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-}
-
-// Condividi partita
-function shareMatch() {
-    const matchId = localStorage.getItem('currentMatchId');
-    if (!matchId) {
-        alert('Nessuna partita attiva!');
-        return;
-    }
-    
-    const url = window.location.origin + window.location.pathname + '?match=' + matchId;
-    
-    if (navigator.share) {
-        navigator.share({
-            title: `${team1Name} vs ${team2Name}`,
-            text: `Segui la partita: ${team1Score}-${team2Score}`,
-            url: url
-        }).catch(() => {});
-    } else {
-        navigator.clipboard.writeText(url).then(() => {
-            alert('🔗 Link copiato!\n\n' + url);
-        }).catch(() => {
-            prompt('Copia questo link:', url);
-        });
-    }
-}
-
-// Lista partite
-function showMatchList() {
-    database.ref('matches').orderByChild('lastUpdate').limitToLast(20).once('value')
-        .then(snapshot => {
-            const matches = [];
-            snapshot.forEach(child => {
-                matches.push({ id: child.key, data: child.val() });
-            });
-            matches.reverse();
-            
-            let html = '<h3>Partite Salvate</h3><div style="max-height: 400px; overflow-y: auto;">';
-            if(matches.length === 0) {
-                html += '<p style="text-align:center; color:#999;">Nessuna partita salvata</p>';
-            } else {
-                matches.forEach(match => {
-                    const date = new Date(match.data.lastUpdate).toLocaleString('it-IT');
-                    html += `
-                        <div style="padding: 10px; margin: 5px 0; background: #f0f0f0; border-radius: 8px; cursor: pointer;" 
-                             onclick="loadFromCloud('${match.id}'); document.getElementById('match-list-modal').classList.remove('active');">
-                            <strong>${match.data.team1Name} vs ${match.data.team2Name}</strong><br>
-                            <small>${date} - ${match.data.team1Score}:${match.data.team2Score}</small>
-                        </div>
-                    `;
-                });
-            }
-            html += '</div>';
-            
-            document.getElementById('match-list').innerHTML = html;
-            document.getElementById('match-list-modal').classList.add('active');
-        });
-}
-</script>
-
 </body>
 </html>
