@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Punteggio Pallamano</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 15px;
+        }
+
+        h1 {
+            color: white;
+            font-size: 1.6em;
+            margin-bottom: 15px;
+            text-align: center;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        #timer-section {
+            background: white;
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+
+        .period-selector {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            margin-bottom: 10px;
+        }
+
+        .period-btn {
+            padding: 6px 14px;
+            background: #e0e0e0;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+
+        .period-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .timer-display-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin: 10px 0;
+        }
+
+        #timer-display {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #667eea;
+            font-family: 'Courier New', monospace;
+        }
+
+        .time-adjust {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .time-adjust button {
+            padding: 3px 8px;
+            font-size: 0.8em;
+            background: #95a5a6;
+        }
+
+        .time-adjust button:hover {
+            background: #7f8c8d;
+        }
+
+        #timer-display.warning { color: #f39c12; }
+        #timer-display.danger { 
+            color: #e74c3c;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        .timer-controls {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        #scoreboard {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .team {
+            background: white;
+            border-radius: 15px;
+            padding: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .team h2 {
+            color: #333;
+            font-size: 1.3em;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .score {
+            font-size: 3em;
+            font-weight: bold;
+            color: #667eea;
+            text-align: center;
+            margin: 10px 0;
+        }
+
+        .controls {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            margin-top: 10px;
+        }
+
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            font-size: 0.95em;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background: #764ba2;
+            transform: scale(1.05);
+        }
+
+        button:active {
+            transform: scale(0.95);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-minus {
+            background: #e74c3c;
+        }
+
+        .btn-minus:hover {
+            background: #c0392b;
+        }
+
+        .btn-start {
+            background: #27ae60;
+        }
+
+        .btn-start:hover {
+            background: #229954;
+        }
+
+        .btn-pause {
+            background: #f39c12;
+        }
+
+        .btn-pause:hover {
+            background: #e67e22;
+        }
+
+        .btn-stats {
+            background: #9b59b6;
+        }
+
+        .btn-stats:hover {
+            background: #8e44ad;
+        }
+
+        #reset-btn {
+            background: #e74c3c;
+            display: block;
+            margin: 0 auto;
+            padding: 10px 30px;
+        }
+
+        #reset-btn:hover {
+            background: #c0392b;
+        }
+
+        .players-section {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 2px solid #eee;
+        }
+
+        .players-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            gap: 8px;
+        }
+
+        .players-header h3 {
+            font-size: 1em;
+            color: #555;
+        }
+
+        .players-header-buttons {
+            display: flex;
+            gap: 6px;
+        }
+
+        .btn-edit {
+            background: #3498db;
+            font-size: 0.85em;
+            padding: 5px 12px;
+        }
+
+        .btn-edit:hover {
+            background: #2980b9;
+        }
+
+        .players-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
+        }
+
+        .player-btn {
+            padding: 8px 4px;
+            font-size: 0.85em;
+            background: #ecf0f1;
+            color: #333;
+            border: 2px solid #bdc3c7;
+            position: relative;
+        }
+
+        .player-btn:hover {
+            background: #d5dbdb;
+            border-color: #95a5a6;
+        }
+
+        .player-btn.has-goals {
+            background: #2ecc71;
+            color: white;
+            border-color: #27ae60;
+        }
+
+        .player-btn.has-goals:hover {
+            background: #27ae60;
+        }
+
+        .player-number {
+            font-weight: bold;
+            font-size: 1.3em;
+        }
+
+        .player-goals {
+            font-size: 0.8em;
+            margin-left: 4px;
+            opacity: 0.9;
+        }
+
+        .edit-mode {
+            display: none;
+        }
+
+        .edit-mode.active {
+            display: block;
+        }
+
+        .edit-player {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            padding: 8px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .edit-player input {
+            width: 60px;
+            padding: 6px;
+            border: 2px solid #bdc3c7;
+            border-radius: 6px;
+            font-size: 1em;
+            text-align: center;
+        }
+
+        .edit-player label {
+            flex: 1;
+            font-size: 0.9em;
+            color: #555;
+        }
+
+        .btn-save {
+            background: #27ae60;
+        }
+
+        .btn-save:hover {
+            background: #229954;
+        }
+
+        /* Modal Statistiche */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 25px;
+            border-radius: 15px;
+            max-width: 400px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 50px rgba(0,0,0,0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-header h2 {
+            color: #333;
+            font-size: 1.5em;
+        }
+
+        .btn-close {
+            background: #e74c3c;
+            font-size: 1.2em;
+            padding: 5px 12px;
+            line-height: 1;
+        }
+
+        .btn-close:hover {
+            background: #c0392b;
+        }
+
+        .stats-list {
+            list-style: none;
+        }
+
+        .stats-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            margin-bottom: 8px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #2ecc71;
+        }
+
+        .stats-item.no-goals {
+            border-left-color: #95a5a6;
+            opacity: 0.6;
+        }
+
+        .stats-player-number {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stats-player-goals {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #2ecc71;
+        }
+
+        .stats-item.no-goals .stats-player-goals {
+            color: #95a5a6;
+        }
+
+        @media (max-width: 768px) {
+            #scoreboard {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>🤾 Punteggio Pallamano</h1>
+    
+    <div id="timer-section">
+        <div class="period-selector">
+            <button class="period-btn active" onclick="setPeriod(1)">1° Tempo</button>
+            <button class="period-btn" onclick="setPeriod(2)">2° Tempo</button>
+        </div>
+        <div class="timer-display-container">
+            <div class="time-adjust" id="minutes-adjust" style="display: none;">
+                <button onclick="adjustTime('min', 1)">▲</button>
+                <button onclick="adjustTime('min', -1)">▼</button>
+            </div>
+            <div id="timer-display">20:00</div>
+            <div class="time-adjust" id="seconds-adjust" style="display: none;">
+                <button onclick="adjustTime('sec', 1)">▲</button>
+                <button onclick="adjustTime('sec', -1)">▼</button>
+            </div>
+        </div>
+        <div class="timer-controls">
+            <button class="btn-start" id="start-btn" onclick="startTimer()">▶ Avvia</button>
+            <button class="btn-pause" id="pause-btn" onclick="pauseTimer()" disabled>⏸ Pausa</button>
+            <button onclick="resetTimer()">⏹ Reset</button>
+        </div>
+    </div>
+
+    <div id="scoreboard">
+        <div class="team">
+            <h2 id="team1-name">Ferrarin</h2>
+            <div class="score" id="team1-score">0</div>
+            <div class="controls">
+                <button class="btn-minus" onclick="decrementScore('team1')">-1</button>
+                <button onclick="incrementScore('team1')">+1</button>
+            </div>
+            
+            <div class="players-section">
+                <div class="players-header">
+                    <h3>Marcatori</h3>
+                    <div class="players-header-buttons">
+                        <button class="btn-stats" onclick="showStats()">📊 Stats</button>
+                        <button class="btn-edit" onclick="toggleEditMode()">✏ Edit</button>
+                    </div>
+                </div>
+                <div id="players-grid" class="players-grid"></div>
+                <div id="edit-mode" class="edit-mode"></div>
+            </div>
+        </div>
+        
+        <div class="team">
+            <h2 id="team2-name">Leno</h2>
+            <div class="score" id="team2-score">0</div>
+            <div class="controls">
+                <button class="btn-minus" onclick="decrementScore('team2')">-1</button>
+                <button onclick="incrementScore('team2')">+1</button>
+            </div>
+        </div>
+    </div>
+    
+    <button id="reset-btn" onclick="return resetAll()">Reset Totale</button>
+
+    <!-- Modal Statistiche -->
+    <div id="stats-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📊 Statistiche Goal</h2>
+                <button class="btn-close" onclick="hideStats()">✕</button>
+            </div>
+            <ul id="stats-list" class="stats-list"></ul>
+        </div>
+    </div>
+
+    <script>
+        let team1Score = 0;
+        let team2Score = 0;
+        let team1Name = "Ferrarin";
+        let team2Name = "Leno";
+        let currentPeriod = 1;
+        let timeInSeconds = 20 * 60;
+        let timerInterval = null;
+        let isRunning = false;
+        let editMode = false;
+        
+        let players = [];
+        let goalHistory = []; // Tiene traccia dell'ordine dei gol
+        
+        for (let i = 1; i <= 12; i++) {
+            players.push({ number: i, goals: 0 });
+        }
+
+        function renderPlayers() {
+            const grid = document.getElementById('players-grid');
+            grid.innerHTML = '';
+            players.forEach((player, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'player-btn';
+                if (player.goals > 0) {
+                    btn.classList.add('has-goals');
+                }
+                btn.innerHTML = `<span class="player-number">#${player.number}</span><span class="player-goals">${player.goals > 0 ? ' (' + player.goals + ')' : ''}</span>`;
+                btn.onclick = () => playerGoal(index);
+                grid.appendChild(btn);
+            });
+        }
+
+        function playerGoal(index) {
+            if (!editMode) {
+                players[index].goals++;
+                team1Score++;
+                goalHistory.push(index); // Salva chi ha segnato
+                document.getElementById('team1-score').innerText = team1Score;
+                renderPlayers();
+            }
+        }
+
+        function toggleEditMode() {
+            editMode = !editMode;
+            const editDiv = document.getElementById('edit-mode');
+            const grid = document.getElementById('players-grid');
+            
+            if (editMode) {
+                editDiv.classList.add('active');
+                grid.style.display = 'none';
+                editDiv.innerHTML = '';
+                
+                // Sezione per modificare i nomi delle squadre
+                const teamNamesDiv = document.createElement('div');
+                teamNamesDiv.innerHTML = `
+                    <div class="edit-player">
+                        <label>Squadra Casa:</label>
+                        <input type="text" id="edit-team1-name" value="${team1Name}" style="flex: 1; width: auto;">
+                    </div>
+                    <div class="edit-player">
+                        <label>Squadra Ospite:</label>
+                        <input type="text" id="edit-team2-name" value="${team2Name}" style="flex: 1; width: auto;">
+                    </div>
+                    <hr style="margin: 15px 0; border: none; border-top: 2px solid #eee;">
+                `;
+                editDiv.appendChild(teamNamesDiv);
+                
+                // Sezione per modificare i numeri di maglia
+                players.forEach((player, index) => {
+                    const div = document.createElement('div');
+                    div.className = 'edit-player';
+                    div.innerHTML = `
+                        <label>Giocatore ${index + 1}:</label>
+                        <input type="number" id="player-${index}" value="${player.number}" min="1" max="99">
+                    `;
+                    editDiv.appendChild(div);
+                });
+                
+                const saveBtn = document.createElement('button');
+                saveBtn.className = 'btn-save';
+                saveBtn.textContent = '✓ Salva Tutto';
+                saveBtn.onclick = savePlayerNumbers;
+                editDiv.appendChild(saveBtn);
+            } else {
+                editDiv.classList.remove('active');
+                grid.style.display = 'grid';
+            }
+        }
+
+        function savePlayerNumbers() {
+            // Salva i nomi delle squadre
+            const team1NameInput = document.getElementById('edit-team1-name');
+            const team2NameInput = document.getElementById('edit-team2-name');
+            if (team1NameInput) {
+                team1Name = team1NameInput.value.trim() || "Ferrarin";
+                document.getElementById('team1-name').innerText = team1Name;
+            }
+            if (team2NameInput) {
+                team2Name = team2NameInput.value.trim() || "Leno";
+                document.getElementById('team2-name').innerText = team2Name;
+            }
+            
+            // Salva i numeri di maglia
+            players.forEach((player, index) => {
+                const input = document.getElementById(`player-${index}`);
+                if (input) {
+                    player.number = parseInt(input.value) || (index + 1);
+                }
+            });
+            
+            // Ordina i giocatori per numero di maglia crescente
+            players.sort((a, b) => a.number - b.number);
+            
+            toggleEditMode();
+            renderPlayers();
+        }
+
+        function incrementScore(team) {
+            if (team === 'team1') {
+                team1Score++;
+                document.getElementById('team1-score').innerText = team1Score;
+            } else {
+                team2Score++;
+                document.getElementById('team2-score').innerText = team2Score;
+            }
+        }
+
+        function decrementScore(team) {
+            if (team === 'team1' && team1Score > 0) {
+                team1Score--;
+                document.getElementById('team1-score').innerText = team1Score;
+                
+                // Rimuove il gol dall'ultimo giocatore che ha segnato
+                if (goalHistory.length > 0) {
+                    const lastPlayerIndex = goalHistory.pop();
+                    if (players[lastPlayerIndex].goals > 0) {
+                        players[lastPlayerIndex].goals--;
+                        renderPlayers();
+                    }
+                }
+            } else if (team === 'team2' && team2Score > 0) {
+                team2Score--;
+                document.getElementById('team2-score').innerText = team2Score;
+            }
+        }
+
+        function setPeriod(period) {
+            if (isRunning) {
+                alert('Ferma il cronometro prima di cambiare tempo');
+                return;
+            }
+            currentPeriod = period;
+            document.querySelectorAll('.period-btn').forEach((btn, index) => {
+                btn.classList.toggle('active', index + 1 === period);
+            });
+            resetTimer();
+        }
+
+        function updateTimerDisplay() {
+            const minutes = Math.floor(timeInSeconds / 60);
+            const seconds = timeInSeconds % 60;
+            const display = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            const timerElement = document.getElementById('timer-display');
+            timerElement.innerText = display;
+
+            timerElement.classList.remove('warning', 'danger');
+            if (timeInSeconds <= 60) {
+                timerElement.classList.add('danger');
+            } else if (timeInSeconds <= 300) {
+                timerElement.classList.add('warning');
+            }
+
+            const showAdjust = !isRunning;
+            document.getElementById('minutes-adjust').style.display = showAdjust ? 'flex' : 'none';
+            document.getElementById('seconds-adjust').style.display = showAdjust ? 'flex' : 'none';
+        }
+
+        function adjustTime(type, delta) {
+            if (isRunning) return;
+            
+            if (type === 'min') {
+                timeInSeconds += delta * 60;
+            } else {
+                timeInSeconds += delta;
+            }
+            
+            if (timeInSeconds < 0) timeInSeconds = 0;
+            if (timeInSeconds > 99 * 60 + 59) timeInSeconds = 99 * 60 + 59;
+            
+            updateTimerDisplay();
+        }
+
+        function startTimer() {
+            if (!isRunning) {
+                isRunning = true;
+                document.getElementById('start-btn').disabled = true;
+                document.getElementById('pause-btn').disabled = false;
+                updateTimerDisplay();
+                
+                timerInterval = setInterval(() => {
+                    if (timeInSeconds > 0) {
+                        timeInSeconds--;
+                        updateTimerDisplay();
+                    } else {
+                        pauseTimer();
+                        alert(`Fine del ${currentPeriod}° tempo!`);
+                    }
+                }, 1000);
+            }
+        }
+
+        function pauseTimer() {
+            if (isRunning) {
+                isRunning = false;
+                clearInterval(timerInterval);
+                document.getElementById('start-btn').disabled = false;
+                document.getElementById('pause-btn').disabled = true;
+                updateTimerDisplay();
+            }
+        }
+
+        function resetTimer() {
+            pauseTimer();
+            timeInSeconds = 20 * 60;
+            updateTimerDisplay();
+        }
+
+        function resetAll() {
+            const risposta = window.confirm('Sei sicuro di voler azzerare tutto (punteggi, marcatori e cronometro)?');
+            if (risposta === true) {
+                // Azzera punteggi
+                team1Score = 0;
+                team2Score = 0;
+                document.getElementById('team1-score').innerText = 0;
+                document.getElementById('team2-score').innerText = 0;
+                
+                // Azzera gol giocatori
+                for (let i = 0; i < players.length; i++) {
+                    players[i].goals = 0;
+                }
+                goalHistory = [];
+                
+                // Aggiorna visualizzazione giocatori
+                renderPlayers();
+                
+                // Ferma e azzera cronometro
+                isRunning = false;
+                if (timerInterval) {
+                    clearInterval(timerInterval);
+                }
+                document.getElementById('start-btn').disabled = false;
+                document.getElementById('pause-btn').disabled = true;
+                timeInSeconds = 20 * 60;
+                updateTimerDisplay();
+            }
+            return false;
+        }
+
+        function showStats() {
+            const modal = document.getElementById('stats-modal');
+            const statsList = document.getElementById('stats-list');
+            
+            // Ordina giocatori per numero di gol (decrescente)
+            const sortedPlayers = [...players].sort((a, b) => b.goals - a.goals);
+            
+            statsList.innerHTML = '';
+            sortedPlayers.forEach(player => {
+                const li = document.createElement('li');
+                li.className = player.goals > 0 ? 'stats-item' : 'stats-item no-goals';
+                li.innerHTML = `
+                    <span class="stats-player-number">#${player.number}</span>
+                    <span class="stats-player-goals">${player.goals} goal${player.goals !== 1 ? '' : ''}</span>
+                `;
+                statsList.appendChild(li);
+            });
+            
+            modal.classList.add('active');
+        }
+
+        function hideStats() {
+            const modal = document.getElementById('stats-modal');
+            modal.classList.remove('active');
+        }
+
+        // Chiude il modal cliccando fuori
+        document.getElementById('stats-modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                hideStats();
+            }
+        });
+
+        // Inizializzazione
+        window.onload = function() {
+            renderPlayers();
+            updateTimerDisplay();
+        };
+    </script>
+</body>
+</html>
