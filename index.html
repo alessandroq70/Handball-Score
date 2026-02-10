@@ -423,13 +423,25 @@
             }
         }
     </style>
-</head>
+        <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 <body>
     <h1>🤾 Punteggio Pallamano</h1>
-    
+
+    </head>
     <div id="timer-section">
         <div class="period-selector">
             <button class="period-btn active" onclick="setPeriod(1)">1° Tempo</button>
+
+                <div style="background: white; border-radius: 10px; padding: 10px; margin-bottom: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+                            <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
+                                            <button onclick="saveToCloud()" style="background: #27ae60; font-size: 0.9em; padding: 8px 16px;">💾 Salva</button>
+                                            <button onclick="shareMatch()" style="background: #3498db; font-size: 0.9em; padding: 8px 16px;">🔗 Condividi</button>
+                                            <button onclick="showMatchList()" style="background: #9b59b6; font-size: 0.9em; padding: 8px 16px;">📋 Partite</button>
+                                        </div>
+                            <span id="save-status" style="font-size: 0.85em; color: #27ae60; margin-top: 5px; display: block; text-align: center;"></span>
+                        </div>
             <button class="period-btn" onclick="setPeriod(2)">2° Tempo</button>
         </div>
         <div class="timer-display-container">
@@ -484,6 +496,12 @@
     
     <button id="reset-btn" onclick="return resetAll()">Reset Totale</button>
 
+        <!-- Cloud Save/Load Buttons -->
+    <div style="text-align: center; margin-top: 20px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+        <button onclick="saveToCloud()" style="background: #27ae60;">☁️ Salva su Cloud</button>
+        <button onclick="showMatchList()" style="background: #3498db;">📋 Partite Salvate</button>
+    </div>
+
     <!-- Modal Statistiche -->
     <div id="stats-modal" class="modal">
         <div class="modal-content">
@@ -496,6 +514,151 @@
     </div>
 
     <script>
+                // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDqcJ8vX5KxPZG5eU2nY3wM7hT6pL9kR4s",
+            authDomain: "handball-score-app.firebaseapp.com",
+            projectId: "handball-score-app",
+            storageBucket: "handball-score-app.appspot.com",
+            messagingSenderId: "123456789012",
+            appId: "1:123456789012:web:abcdef123456"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // Cloud Save/Load Functions
+        function saveToCloud() {
+            const matchData = {
+                team1Name: team1Name,
+                team2Name: team2Name,
+                team1Score: team1Score,
+                team2Score: team2Score,
+                currentPeriod: currentPeriod,
+                timeInSeconds: timeInSeconds,
+                players: players,
+                goalHistory: goalHistory,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            };
+
+            db.collection('matches').add(matchData)
+                .then((docRef) => {
+                    alert('Partita salvata! ID: ' + docRef.id);
+                    // Save the ID for later retrieval
+                    localStorage.setItem('lastMatchId', docRef.id);
+                })
+                .catch((error) => {
+                    console.error('Errore nel salvataggio:', error);
+                    alert('Errore nel salvataggio: ' + error.message);
+                });
+        }
+
+        function loadFromCloud() {
+            const matchId = prompt('Inserisci l\'ID della partita:');
+            if (!matchId) return;
+
+            db.collection('matches').doc(matchId).get()
+                .then((doc) => {
+                    if (doc.exists) {
+                        const data = doc.data();
+                        team1Name = data.team1Name || "Ferrarin";
+                        team2Name = data.team2Name || "Leno";
+                        team1Score = data.team1Score || 0;
+                        team2Score = data.team2Score || 0;
+                        currentPeriod = data.currentPeriod || 1;
+                        timeInSeconds = data.timeInSeconds || 1200;
+                        players = data.players || [];
+                        goalHistory = data.goalHistory || [];
+
+                        // Update UI
+                        document.getElementById('team1-name').innerText = team1Name;
+                        document.getElementById('team2-name').innerText = team2Name;
+                        document.getElementById('team1-score').innerText = team1Score;
+                        document.getElementById('team2-score').innerText = team2Score;
+                        renderPlayers();
+                        updateTimerDisplay();
+                        setPeriod(currentPeriod);
+                        alert('Partita caricata con successo!');
+                    } else {
+                        alert('Partita non trovata!');
+                    }
+                })
+                .catch((error) => {
+                    console.error('Errore nel caricamento:', error);
+                    alert('Errore nel caricamento: ' + error.message);
+                });
+        }
+
+        function showMatchList() {
+            const modal = document.getElementById('match-list-modal');
+            const matchList = document.getElementById('match-list');
+            matchList.innerHTML = '<p>Caricamento...</p>';
+            modal.classList.add('active');
+
+            db.collection('matches').orderBy('timestamp', 'desc').limit(10).get()
+                .then((querySnapshot) => {
+                    matchList.innerHTML = '';
+                    if (querySnapshot.empty) {
+                        matchList.innerHTML = '<p>Nessuna partita salvata</p>';
+                        return;
+                    }
+                    querySnapshot.forEach((doc) => {
+                        const data = doc.data();
+                        const div = document.createElement('div');
+                        div.className = 'match-item';
+                        const date = data.timestamp ? data.timestamp.toDate().toLocaleString('it-IT') : 'N/A';
+                        div.innerHTML = `
+                            <strong>${data.team1Name} vs ${data.team2Name}</strong><br>
+                            Score: ${data.team1Score} - ${data.team2Score}<br>
+                            Data: ${date}<br>
+                            <button onclick="loadMatch('${doc.id}')">Carica</button>
+                        `;
+                        matchList.appendChild(div);
+                    });
+                })
+                .catch((error) => {
+                    console.error('Errore:', error);
+                    matchList.innerHTML = '<p>Errore nel caricamento delle partite</p>';
+                });
+        }
+
+        function loadMatch(matchId) {
+            db.collection('matches').doc(matchId).get()
+                .then((doc) => {
+                    if (doc.exists) {
+                        const data = doc.data();
+                        team1Name = data.team1Name || "Ferrarin";
+                        team2Name = data.team2Name || "Leno";
+                        team1Score = data.team1Score || 0;
+                        team2Score = data.team2Score || 0;
+                        currentPeriod = data.currentPeriod || 1;
+                        timeInSeconds = data.timeInSeconds || 1200;
+                        players = data.players || [];
+                        goalHistory = data.goalHistory || [];
+
+                        document.getElementById('team1-name').innerText = team1Name;
+                        document.getElementById('team2-name').innerText = team2Name;
+                        document.getElementById('team1-score').innerText = team1Score;
+                        document.getElementById('team2-score').innerText = team2Score;
+                        renderPlayers();
+                        updateTimerDisplay();
+                        setPeriod(currentPeriod);
+                        hideMatchList();
+                        alert('Partita caricata!');
+                    }
+                })
+                .catch((error) => {
+                    console.error('Errore:', error);
+                    alert('Errore: ' + error.message);
+                });
+        }
+
+        function hideMatchList() {
+            const modal = document.getElementById('match-list-modal');
+            modal.classList.remove('active');
+        }
+
         let team1Score = 0;
         let team2Score = 0;
         let team1Name = "Ferrarin";
@@ -793,5 +956,15 @@
             updateTimerDisplay();
         };
     </script>
+
+        <!-- Modal Lista Partite -->
+        <div id="match-list-modal" class="modal">
+                    <div class="modal-content">
+                                    <div class="modal-header">
+                                                        <h2>📋 Partite Salvate</h2>
+                <button class="btn-close" onclick="hideMatchList()">✕</button>                                                    </div>
+                                    <div id="match-list"></div>
+                                </div>
+                </div>
 </body>
 </html>
